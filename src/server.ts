@@ -1,10 +1,13 @@
 import cors from "cors";
 import "dotenv/config";
+import dotenv from "dotenv";
 import express from "express";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { ToolFactory } from "./tools/tool-factory.js";
 import { connectDB } from "./clients/db-client.js";
+
+dotenv.config();
 
 const app = express();
 const PORT = Number(process.env.PORT ?? 3000);

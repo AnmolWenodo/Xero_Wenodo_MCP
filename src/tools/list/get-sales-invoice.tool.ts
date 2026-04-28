@@ -70,10 +70,9 @@ Do NOT use for:
           type: "text" as const,
           text: `Found ${invoices.length} records`,
         },
-        ...invoices.map((inv: any, index: number) => ({
+        ...invoices.map((inv: any) => ({
           type: "text" as const,
           text: [
-            `Sale #${index + 1}`,
             `Sales ID: ${inv.EPOS_SALES_HEADER_ID}`,
             `Check ID: ${inv.CHECK_ID}`,
             `Check No: ${inv.CHECK_NO}`,

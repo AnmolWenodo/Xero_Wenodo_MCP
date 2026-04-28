@@ -11,8 +11,8 @@ import { ensureError } from "../helpers/ensure-error.js";
 
 dotenv.config();
 
-const client_id = process.env.XERO_CLIENT_ID;
-const client_secret = process.env.XERO_CLIENT_SECRET;
+const client_id = "4C2D71B56B804B83BD94BDF534B40D27";
+const client_secret = "3LAuSEerSs0MK-a84WF-UhiwncGHUx3Vu44KEQWSX5-fPKvf";
 const bearer_token = process.env.XERO_CLIENT_BEARER_TOKEN;
 const grant_type = "client_credentials";
 
@@ -89,12 +89,13 @@ class CustomConnectionsXeroClient extends MCPXeroClient {
   }
 
   public async getClientCredentialsToken(): Promise<TokenSet> {
+   
     const scope =
-      "accounting.transactions accounting.contacts accounting.settings accounting.reports.read payroll.settings payroll.employees payroll.timesheets";
+      "accounting.transactions  accounting.contacts accounting.settings accounting.reports.read payroll.settings payroll.employees payroll.timesheets";
     const credentials = Buffer.from(
       `${this.clientId}:${this.clientSecret}`,
     ).toString("base64");
-
+ console.log("credentials:",this.clientId, this.clientSecret, credentials);
     try {
       const response = await axios.post(
         "https://identity.xero.com/connect/token",
@@ -107,7 +108,7 @@ class CustomConnectionsXeroClient extends MCPXeroClient {
           },
         },
       );
-
+console.log("Token response:", response.data);
       // Get the tenant ID from the connections endpoint
       const token = response.data.access_token;
       const connectionsResponse = await axios.get(
@@ -127,8 +128,9 @@ class CustomConnectionsXeroClient extends MCPXeroClient {
       return response.data;
     } catch (error) {
       const axiosError = error as AxiosError;
+      
       throw new Error(
-        `Failed to get Xero token: ${axiosError.response?.data || axiosError.message}`,
+        `Failed to get Xero token: ${JSON.stringify(axiosError.response?.data) || JSON.stringify(axiosError.message)}`,
       );
     }
   }
