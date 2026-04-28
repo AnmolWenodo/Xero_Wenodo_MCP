@@ -2,7 +2,6 @@ import cors from "cors";
 import "dotenv/config";
 import express from "express";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { ToolFactory } from "./tools/tool-factory.js";
 import { connectDB } from "./clients/db-client.js";
@@ -15,7 +14,6 @@ app.use(express.json());
 
 let mcpServer: McpServer;
 
-// 🔥 Initialize once (important)
 async function init() {
   await connectDB();
 
@@ -23,42 +21,14 @@ async function init() {
     name: "wenodo-mcp",
     version: "1.0.0",
   });
+  mcpServer.tool("test", async () => {
+    return {
+      content: [{ type: "text", text: "working" }],
+    };
+  });
 
   ToolFactory(mcpServer);
 }
-
-//////////////////////////////////////////////////////
-// ✅ 1. SSE (FOR UI CONNECTION - MOST IMPORTANT)
-//////////////////////////////////////////////////////
-
-const sseTransports = new Map<string, SSEServerTransport>();
-
-app.get("/mcp/sse", async (_req, res) => {
-  const transport = new SSEServerTransport("/mcp/messages", res);
-  sseTransports.set(transport.sessionId, transport);
-
-  res.on("close", () => {
-    sseTransports.delete(transport.sessionId);
-  });
-
-  await mcpServer.connect(transport);
-});
-
-app.post("/mcp/messages", async (req, res) => {
-  const sessionId = req.query.sessionId as string;
-
-  if (!sessionId) {
-    return res.status(400).json({ error: "Missing sessionId" });
-  }
-
-  const transport = sseTransports.get(sessionId);
-
-  if (!transport) {
-    return res.status(404).json({ error: "Invalid session" });
-  }
-
-  await transport.handlePostMessage(req, res);
-});
 
 //////////////////////////////////////////////////////
 // ✅ 2. HTTP (FOR API CALLS / TESTING)
@@ -71,10 +41,35 @@ app.post("/mcp", async (req, res) => {
 
   try {
     await mcpServer.connect(transport);
+
+    // 🔥 IMPORTANT: DO NOT pass res manually logic after this
     await transport.handleRequest(req, res, req.body);
+
+    // ❌ REMOVE ANY res.send / res.end / logs after this
+    // transport handles response itself
+
   } catch (err) {
     console.error("MCP error:", err);
-    res.status(500).json({ error: "Internal error" });
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Internal error" });
+    }
+  }
+});
+
+app.get("/mcp", async (req, res) => {
+  const transport = new StreamableHTTPServerTransport({
+    sessionIdGenerator: undefined,
+  });
+
+  try {
+    await mcpServer.connect(transport);
+
+    await transport.handleRequest(req, res, {
+      method: "tools/list",
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed" });
   } finally {
     await transport.close();
   }
